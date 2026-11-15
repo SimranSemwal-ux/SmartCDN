@@ -376,29 +376,20 @@ The test suite validates:
 
 ---
 
-## 🐙 GitHub Deployment Instructions
+## GitHub Repository
 
-To push the project to your GitHub profile ([SimranSemwal-ux](https://github.com/SimranSemwal-ux)):
+**Repository:** https://github.com/SimranSemwal-ux/SmartCDN
 
-1. Create a new repository on GitHub named `SmartCDN` (or your preferred name).
-2. Run the following commands in the project directory:
+The SmartCDN source code is maintained in this repository.
 
-```powershell
-# Verify git status
-git status
+### Updating the Repository
 
-# Add all files to staging
+To push future changes:
+
+```bash
 git add .
-
-# Create the initial commit
-git commit -m "feat: complete SmartCDN platform implementation inspired by IEEE 2025 paper"
-
-# Link your GitHub remote repository (replace with your repo URL)
-git remote add origin https://github.com/SimranSemwal-ux/SmartCDN.git
-
-# Set main branch and push
-git branch -M main
-git push -u origin main
+git commit -m "Describe your changes"
+git push origin main
 ```
 
 ---
