@@ -1,0 +1,13 @@
+{
+  "name": "smartcdn",
+  "version": "1.0.0",
+  "description": "SmartCDN - Machine Learning-Based Adaptive Replica Server and Cache Optimization System",
+  "scripts": {
+    "backend": "python backend/app.py",
+    "frontend": "cd frontend && npm run dev",
+    "test": "pytest tests/test_backend.py",
+    "train": "python backend/ml/train_model.py"
+  },
+  "author": "Simran Semwal",
+  "license": "MIT"
+}
