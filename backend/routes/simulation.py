@@ -165,7 +165,7 @@ def get_simulation_history():
 
 @simulation_bp.route('/history/<run_id>', methods=['DELETE'])
 def delete_simulation_run(run_id):
-    sim_run = SimulationRun.query.get(run_id)
+    sim_run = db.session.get(SimulationRun, run_id)
     if not sim_run:
         return jsonify({'status': 'error', 'message': 'Run not found'}), 404
 

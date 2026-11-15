@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, request
 from backend.simulation.cdn_simulator import CDNSimulator
 from backend.simulation.cost_optimizer import CostOptimizer
 from backend.database.db import db
-from backend.models.database_models import OptimizationDecision
+from backend.models.database_models import OptimizationDecision, ServerActivityLog
 
 optimization_bp = Blueprint('optimization', __name__)
 
@@ -25,13 +25,13 @@ def run_optimization():
     )
 
     # Use custom demand or calculate from recent simulation demand
-    if custom_demand is not None:
+    if custom_demand is not None and str(custom_demand).strip() != '':
         predicted_drr = float(custom_demand)
     else:
         recent_total = sum(srv['history_demand'][-1] for srv in sim.servers.values())
-        predicted_drr = max(200.0, recent_total * 4.0)
+        predicted_drr = max(200.0, float(recent_total))
 
-    current_active = sum(1 for s in sim.servers.values() if s['status'] in ['Active', 'High Demand', 'Overloaded'])
+    current_active = sum(1 for s in sim.servers.values() if s['status'] != 'Inactive')
 
     result = optimizer.optimize_configuration(
         predicted_demand_drr=predicted_drr,
@@ -64,8 +64,8 @@ def run_optimization():
 def get_optimization_results():
     sim = CDNSimulator.get_instance()
     recent_total = sum(srv['history_demand'][-1] for srv in sim.servers.values())
-    predicted_drr = max(200.0, recent_total * 4.0)
-    current_active = sum(1 for s in sim.servers.values() if s['status'] in ['Active', 'High Demand', 'Overloaded'])
+    predicted_drr = max(200.0, float(recent_total))
+    current_active = sum(1 for s in sim.servers.values() if s['status'] != 'Inactive')
 
     optimizer = sim.cost_optimizer
     result = optimizer.optimize_configuration(
@@ -101,6 +101,19 @@ def apply_optimization_plan():
                 sim.servers[sid]['status'] = rec_status
                 sim.servers[sid]['manual_override'] = False
                 applied_changes.append(f"{sid}: {old_status} -> {rec_status}")
+                
+                # Record event in database
+                log = ServerActivityLog(
+                    server_id=sid,
+                    timestamp=datetime.now(timezone.utc),
+                    action="AUTO_ACTIVATED" if rec_status == 'Active' else "AUTO_DEACTIVATED",
+                    reason="Applied CARSCM cost optimization allocation",
+                    active_count=sum(1 for s in sim.servers.values() if s['status'] != 'Inactive')
+                )
+                db.session.add(log)
+
+    if applied_changes:
+        db.session.commit()
 
     return jsonify({
         'status': 'success',

@@ -12,7 +12,8 @@ import {
   Globe,
   RefreshCw,
   Database,
-  ArrowUpRight
+  ArrowUpRight,
+  List
 } from 'lucide-react';
 import { serverApi } from '../services/api';
 
@@ -87,6 +88,7 @@ export default function ServerManagement() {
   const servers = data?.servers || [];
   const origin = data?.origin || {};
   const autoScaling = data?.auto_scaling_enabled ?? true;
+  const activityLogs = data?.activity_logs || [];
 
   return (
     <div className="space-y-6">
@@ -283,7 +285,7 @@ export default function ServerManagement() {
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-medium">Misses</span>
-                  <p className="font-bold text-rose-600 mt-0.5">{srv.cache_misses}</p>
+                  <p className="font-bold text-rose-600 mt-0.5">{srv.origin_misses}</p>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-medium">Hit Ratio</span>
@@ -307,6 +309,60 @@ export default function ServerManagement() {
             </div>
           );
         })}
+      </div>
+
+      {/* Database Activity Log Table */}
+      <div className="card-clean p-6 bg-white space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Recorded Server Activation & Scaling Events</h3>
+            <p className="text-xs text-slate-400">Database audit trail of automatic scaling and manual override actions</p>
+          </div>
+          <span className="text-xs font-mono text-slate-400">SQLite Audit Log</span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-400 font-medium">
+                <th className="pb-2.5">Timestamp</th>
+                <th className="pb-2.5">Server</th>
+                <th className="pb-2.5">Action</th>
+                <th className="pb-2.5">Reason</th>
+                <th className="pb-2.5 text-right">Cluster Active Count</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {activityLogs.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="py-6 text-center text-slate-400">
+                    No server state transitions recorded yet. Toggle a server or run the optimizer to generate audit events.
+                  </td>
+                </tr>
+              ) : (
+                activityLogs.map((log, i) => (
+                  <tr key={i} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-2.5 font-mono text-slate-400 text-[11px]">
+                      {log.timestamp ? log.timestamp.split('T')[1]?.split('.')[0] : '-'}
+                    </td>
+                    <td className="py-2.5 font-bold text-slate-800">{log.server_id}</td>
+                    <td className="py-2.5">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                        log.action.includes('ACTIVATED') ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                      }`}>
+                        {log.action}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-slate-600">{log.reason}</td>
+                    <td className="py-2.5 text-right font-mono font-bold text-blue-700">
+                      {log.active_count} Nodes
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

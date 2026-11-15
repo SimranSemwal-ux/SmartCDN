@@ -14,7 +14,7 @@ def get_servers():
     for sid, srv in sim.servers.items():
         cache_inst = sim.caches.get(sid)
         used_mb = getattr(cache_inst, 'used_mb', 0.0)
-        total_reqs = srv['cache_hits'] + srv['cache_misses']
+        total_reqs = srv['cache_hits'] + srv['peer_hits'] + srv['origin_misses']
         hit_ratio = round((srv['cache_hits'] / total_reqs * 100), 2) if total_reqs > 0 else 0.0
         
         servers_list.append({
@@ -32,18 +32,22 @@ def get_servers():
             'response_time_ms': srv['avg_latency_ms'],
             'cache_hits': srv['cache_hits'],
             'peer_hits': srv['peer_hits'],
+            'origin_misses': srv['origin_misses'],
             'cache_misses': srv['cache_misses'],
             'hit_ratio': hit_ratio,
             'is_auto_scale': srv['is_auto_scale'],
             'manual_override': srv['manual_override']
         })
 
+    recent_logs = ServerActivityLog.query.order_by(ServerActivityLog.timestamp.desc()).limit(10).all()
+
     return jsonify({
         'status': 'success',
         'data': {
             'servers': servers_list,
             'origin': sim.origin_server,
-            'auto_scaling_enabled': sim.auto_scaling_enabled
+            'auto_scaling_enabled': sim.auto_scaling_enabled,
+            'activity_logs': [l.to_dict() for l in recent_logs]
         }
     })
 
@@ -60,8 +64,8 @@ def toggle_server():
     current_status = target_server['status']
     
     # Don't deactivate if it's the only active server
-    active_count = sum(1 for s in sim.servers.values() if s['status'] in ['Active', 'High Demand', 'Overloaded'])
-    if current_status in ['Active', 'High Demand', 'Overloaded'] and active_count <= 1:
+    active_count = sum(1 for s in sim.servers.values() if s['status'] != 'Inactive')
+    if current_status != 'Inactive' and active_count <= 1:
         return jsonify({
             'status': 'error',
             'message': 'Cannot deactivate the last remaining active replica server. SmartCDN requires at least one active replica server.'

@@ -12,7 +12,8 @@ import {
   RefreshCw,
   AlertTriangle,
   CheckCircle,
-  Database
+  Database,
+  History
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -28,7 +29,7 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-import { dashboardApi, simulationApi } from '../services/api';
+import { dashboardApi } from '../services/api';
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState(null);
@@ -136,6 +137,7 @@ export default function Dashboard() {
   const densityData = metrics?.density_history || [];
   const utilizationData = metrics?.utilization_history || [];
   const costData = metrics?.cost_history || [];
+  const serverStateData = metrics?.server_state_history || [];
   const recentEvents = metrics?.recent_events || [];
 
   return (
@@ -199,7 +201,7 @@ export default function Dashboard() {
               <h3 className="text-sm font-semibold text-slate-900">Request Density Over Time (DRR)</h3>
               <p className="text-xs text-slate-400">Incoming request rate distributed across RS1–RS5</p>
             </div>
-            <span className="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded">req / step</span>
+            <span className="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded">req / h</span>
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -325,6 +327,65 @@ export default function Dashboard() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      </div>
+
+      {/* Chart E: Server Activation History Timeline */}
+      <div className="card-clean p-5 bg-white">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Server Activation State History (Section E)</h3>
+            <p className="text-xs text-slate-400">Replica server operational state (Active / Inactive) across recent intervals</p>
+          </div>
+          <span className="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded">Timeline</span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-400 font-medium">
+                <th className="pb-2.5">Time</th>
+                <th className="pb-2.5">Active Nodes</th>
+                <th className="pb-2.5">RS1 (US-East)</th>
+                <th className="pb-2.5">RS2 (US-West)</th>
+                <th className="pb-2.5">RS3 (EU-Central)</th>
+                <th className="pb-2.5">RS4 (AP-East)</th>
+                <th className="pb-2.5">RS5 (AP-South)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-mono">
+              {serverStateData.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="py-6 text-center text-slate-400 font-sans">
+                    No state history recorded yet. Start simulation above to generate telemetry intervals.
+                  </td>
+                </tr>
+              ) : (
+                serverStateData.slice().reverse().map((point, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-2 text-slate-500">{point.time}</td>
+                    <td className="py-2 font-bold text-blue-700">{point.active_servers} / 5</td>
+                    {['RS1', 'RS2', 'RS3', 'RS4', 'RS5'].map((sid) => {
+                      const st = point[sid] || 'Active';
+                      const isActive = st !== 'Inactive';
+                      return (
+                        <td key={sid} className="py-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-sans font-semibold ${
+                            st === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                            st === 'High Demand' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                            st === 'Overloaded' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                            'bg-slate-100 text-slate-500 border border-slate-200'
+                          }`}>
+                            {st}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
